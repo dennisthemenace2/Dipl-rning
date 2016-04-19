@@ -40,7 +40,7 @@ lstm <- setRefClass("lstm",
                          .self$Wc = matrix(rnorm(.self$Dh* dimx ,0,0.01),.self$Dh, dimx)
                          
                        },
-                       gradient = function(X,Y,backwards =1){
+                       gradient = function(X,Y){
                        
                          dWo = matrix(0,  nrow = nrow(.self$Wo) ,ncol = ncol(.self$Wo) )
                          dUo = matrix(0,  nrow = nrow(.self$Uo) ,ncol = ncol(.self$Uo) )
@@ -104,8 +104,8 @@ lstm <- setRefClass("lstm",
                            dUf = dUf + matrix( gferr[i,] %o% .self$c_t[i-1,],nrow= nrow(dUf) , ncol= ncol(dUf) )
                            dWf = dWf + matrix( gferr[i,]%o% X[i-1,],nrow= nrow(dWf) , ncol= ncol(dWf) )
                           
-                           dWc = dWc + matrix(cierr[i] %o% X[i-1,],nrow= nrow(dWc) , ncol= ncol(dWc) )
-                           dUc = dUc + matrix(cierr[i] %o% .self$c_t[i-1,],nrow= nrow(dWc) , ncol= ncol(dWc) )
+                           dWc = dWc + matrix(cierr[i,] %o% X[i-1,],nrow= nrow(dWc) , ncol= ncol(dWc) )
+                           dUc = dUc + matrix(cierr[i,] %o% .self$c_t[i-1,],nrow= nrow(dUc) , ncol= ncol(dUc) )
                            
                          }
                                       
@@ -125,7 +125,7 @@ lstm <- setRefClass("lstm",
                          
                          ret
                        },
-                       train = function(X,Y,backwards =3,iterations = 1000,lr = 0.001){
+                       train = function(X,Y,iterations = 1000,lr = 0.001){
                          ## init matricies
                          if(class(X)!='list'){
                            cat( c('X should be a of type list') )
@@ -144,7 +144,7 @@ lstm <- setRefClass("lstm",
                              xl = X[[l]]
                              yl = Y[[l]]
                              
-                             ret = gradient(xl,yl,backwards)
+                             ret = gradient(xl,yl)
                            #  print(ret)
                              
                              cost = ret[[1]]
@@ -191,11 +191,11 @@ lstm <- setRefClass("lstm",
                        chkGradient= function(){
                          
                          epsilon = 0.00001
-                         tol =     0.000000001 
-                      #   X= matrix(c(10,1,5,7,4,2) )
-                      #   Y= matrix(c(5,4,1,8,4,2) )
-                         X= matrix(c(0.1) )
-                         Y= matrix(c(0.5) )
+                         tol =     0.0000001 
+                     #    X= matrix(c(10,1,5,7,4,2) )
+                    #     Y= matrix(c(5,4,1,8,4,2) )
+                         X= matrix(c(0.1,0.2) )
+                         Y= matrix(c(0.5,0.6) )
                          
                          
                          res = gradient(X,Y)
@@ -362,6 +362,32 @@ lstm <- setRefClass("lstm",
                          
                          
                        },
+                    generate=function(n,init){
+                      
+                      h = matrix(0,.self$Dh,1) ##seed is zeros
+                      hatc  =  matrix(0,.self$Dh,1) ##seed is zeros
+                      
+                      x = init
+                      Y = c()
+                      for(i in 1:n){
+                        it = .self$Ui %*% h+ .self$Wi %*%x
+                        ft = .self$Uf %*% h + .self$Wf %*%x
+                        ot = .self$Uo %*% h + .self$Wo %*%x
+                        ct = .self$Uc %*% h + .self$Wc %*%x
+                        
+                        ai = .self$sigmoid(it)
+                        af = .self$sigmoid(ft)
+                        ao = .self$sigmoid(ot)
+                        ac = tanh(ct)
+                        
+                        hatc = af * hatc + ai*ac
+                        h =  ao * hatc
+                        
+                        Y = c(Y,h)
+                      }
+                      Y
+                      
+                    },
                        forward=function(X){
                          ##for each row
                          Y= c()
@@ -433,11 +459,15 @@ mem$init(1)
 
 mem$chkGradient()
 
-costs = mem$train(list(as.matrix(x)) ,list(as.matrix(y)) ,iterations = 1000,lr = 0.0001,backwards=1)
-plot(1:length(costs), costs)
-y_pred = mem$forward(as.matrix(x))
-plot(x,y)
-points(x,y_pred,col='red')
+#costs = mem$train(list(as.matrix(x)) ,list(as.matrix(y)) ,iterations = 1000,lr = 0.0001)
+#plot(1:length(costs), costs)
+#y_pred = mem$forward(as.matrix(x))
+#plot(x,y)
+#points(x,y_pred,col='red')
+
+#gen = mem$generate(10,2)
+#plot(1:length(gen),gen)
+
 
 
 
