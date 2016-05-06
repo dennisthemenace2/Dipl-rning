@@ -177,7 +177,7 @@ sentencenet <- setRefClass("sentencenet",
                                    gradaprox  =  (res1[[1]] - res2[[1]])/(2*epsilon)
                                    gradL = res[[3]]
                                    ikx = which(gradL$idx==y)
-                                   if(abs(gradL$dL[[ikx]]-gradaprox)>tol ){
+                                   if(abs(gradL$dL[[ikx]][x]-gradaprox)>tol ){
                                      cat(c(x,'x',y,  ' gradL:',gradL$dL[[ikx]],' approximation:',gradaprox,'\n') )
                                    }
                                  }
@@ -239,7 +239,7 @@ sentencenet <- setRefClass("sentencenet",
 ###test
 
 sent = sentencenet(10)
-#sent$chkGradient()
+sent$chkGradient()
 
 ###simple test
 ##create test data set
