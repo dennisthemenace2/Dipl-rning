@@ -3,15 +3,13 @@
 
 ##create data...
 
+options(stringsAsFactors = FALSE)
 options(error = recover)
 
 
 sentencenet <- setRefClass("sentencenet",
                            fields = list(U = 'matrix',H='matrix',L = 'matrix', Dh = 'numeric', h_t='matrix'),
                            methods = list(
-                             predict = function(pathToDir){
-                               
-                             },
                              init=function(classes, V){
                                .self$U = matrix(rnorm(.self$Dh* classes,0,0.01),classes,.self$Dh)
                                .self$H = matrix(rnorm(.self$Dh*.self$Dh ,0,0.01),.self$Dh, .self$Dh)
@@ -35,7 +33,7 @@ sentencenet <- setRefClass("sentencenet",
                                  #    print(i)
                                  costs = costs -log( Y_pred[i-1, Y[i-1,]==1 ])
                                  delta =  err[i-1,] %*%.self$U  * (.self$h_t[i,] * (1-.self$h_t[i,]))
-                                 dU = dU + matrix(err[i-1,] %o% .self$h_t[i,], nrow = nrow(.self$U) ,ncol = ncol(.self$U) ) ##check this %o%
+                                 dU = dU + matrix(err[i-1,] %*% t(.self$h_t[i,]), nrow = nrow(.self$U) ,ncol = ncol(.self$U) ) ##check this %o%
                                  
                                  for(s in 1:backwards){
                                    ts = i - s
@@ -45,7 +43,7 @@ sentencenet <- setRefClass("sentencenet",
                                    }
                                    #  print('timestep')
                                    # print(ts)
-                                   dH = dH + matrix(matrix(delta) %o% .self$h_t[ts,],nrow= .self$Dh, ncol= .self$Dh)
+                                   dH = dH + matrix(matrix(delta) %*% t(.self$h_t[ts,]) ,nrow= .self$Dh, ncol= .self$Dh)
                                    if(any(dLidx ==X[ts]) ){
                                      idx = which(dLidx ==X[ts])
                                      dLlist[[idx]] = dLlist[[idx]] + delta
@@ -114,20 +112,6 @@ sentencenet <- setRefClass("sentencenet",
                                  cat(c('iteration:', i, ' costs:',costs,'\n'))
                                }
                                totalCosts
-                             },
-                             generate=function(n,init){
-                               
-                               Y= c()
-                               h = matrix(0,.self$Dh,1) ##seed is zeros
-                               x = init
-                               for(i in 1:n){
-                                 z1 = .self$H %*% h + .self$L %*%x
-                                 h = .self$sigmoid(z1 )
-                                 x = .self$softmax(t(.self$U %*% h) )
-                                 Y = c(Y,which.max(x) )
-                               }
-                               Y
-                               
                              },
                              chkGradient= function(){
                                
@@ -214,12 +198,11 @@ sentencenet <- setRefClass("sentencenet",
                                  z1 = .self$H %*% .self$h_t[i,] + .self$L[,X[i,]] 
                                  h = .self$sigmoid(z1 )
                                  .self$h_t[i+1,] = h
-                                 
-                                 z2 = softmax(t(.self$U %*% h) )
-                                 #  z2 = which.max(z2) ##get only idx
-                                 Y[i,] =z2
+                                 z2 = t(.self$U %*% h)
+                                 yhat = softmax( z2 )
+                                 Y[i,] =yhat
                                }
-                               # browser()
+                              
                                Y
                              },
                              sigmoid = function(x){
@@ -244,15 +227,17 @@ sent$chkGradient()
 ###simple test
 ##create test data set
 
-txt = c('aber das ist doch gut',
-        'das ist gut',
-        'gut ist das',
-        'gut aber',
-        'schlecht ist das',
-        'schlecht doch gut',
-        'aber doch schlecht',
-        'ist schlecht')
-ty = c(1,1,1,1,2,2,2,2)
+txt = c('die katze hat zwei augen',
+        'ein hund hat vier beine',
+        'katze und hund haben beide vier beine',
+        'ein katze und hund sind beides haustiere',
+        'haben vier beine und zwei augen',
+        'eine spinne hat sechs augen',
+        'eine ameise hat sechs beine',
+        'spinnen und ameisen sind keine haustiere',
+        'spinnen und ameisen habe beide sechs beine',
+        'haben sechs augen und sechs beine')
+ty = c(1,1,1,1,1,2,2,2,2,2)
 
 datasample = data.frame('txt'=txt, 'y'=ty)
 
